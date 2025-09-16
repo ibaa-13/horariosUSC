@@ -1,6 +1,6 @@
-const plantillaId = '1ObvPFAO4ihGtGAhqC8Gdyxr2KsznEaFosZAwrLfNvic';
-const datasetId = "1djb9S0Dj1cFAvNZoZTtmEwLbqRhNHPLi";
-const folderId = "1t0MuWKpEcvZZgJrSrFVwh9wVg8fRClC3"
+const plantillaId = '';
+const datasetId = "";
+const folderId = ""
 
 function importCSVfromDrive(fileId) {
   let file = DriveApp.getFileById(fileId);
@@ -142,3 +142,4 @@ function onFormSubmit(e) {
   const ultimaFila = hoja.getLastRow();
   hoja.getRange(ultimaFila, linksCol).setValue(pdfFile.getUrl());
 }
+
