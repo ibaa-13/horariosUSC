@@ -1,30 +1,17 @@
 # horariosUSC
 
-Generador de horarios personalizados a partir de los horarios publicados por la **Universidade de Santiago de Compostela (USC)**.
+Genera horarios personalizados a partir de los horarios publicados por la Universidade de Santiago de Compostela (USC).
 
-El proyecto extrae asignaturas, grupos, aulas y franjas horarias de la web de la USC, prepara un formulario de Google Forms para seleccionar grupos y utiliza Google Apps Script para generar un PDF con el horario de cada respuesta.
-
-## Cómo funciona
-
-1. **Extrae los horarios** de las URLs configuradas y los guarda en un CSV.
-2. **Agrupa las asignaturas y sus grupos** por curso en un archivo JSON.
-3. **Crea un formulario** con Selenium: añade un título por curso y una pregunta de casillas por asignatura.
-4. **Procesa las respuestas** con Google Apps Script: rellena una plantilla, genera un PDF en Drive, lo comparte con la persona que respondió y registra su enlace en la hoja de respuestas.
-
-La configuración incluida contiene entradas de primero a cuarto y de primero a quinto de Mates-Física. Las URLs apuntan a vistas concretas del calendario: revísalas antes de generar un nuevo horario.
+El proyecto extrae asignaturas, grupos, aulas y franjas horarias a un CSV, prepara un formulario de Google Forms para elegir grupos y utiliza Google Apps Script para generar y compartir un PDF con cada respuesta.
 
 ## Requisitos
 
-- **Python 3.10 o superior**, por la sintaxis de tipos utilizada en el código.
-- Conexión a Internet para consultar los horarios.
-- Para crear el formulario: **Google Chrome**, un **ChromeDriver compatible** y un perfil de Chrome con una sesión de Google iniciada.
-- Para generar los PDF: acceso a **Google Forms, Sheets, Drive, Docs y Apps Script**.
-
-La automatización de Google Forms utiliza textos de la interfaz en **español**.
+- Python 3.10 o superior.
+- Conexión a Internet para consultar la USC.
+- Para crear formularios: Google Chrome, ChromeDriver compatible y un perfil de Chrome con una sesión de Google iniciada. La interfaz de Google Forms debe estar en español.
+- Para generar PDF: Google Forms, Sheets, Drive, Docs y Apps Script.
 
 ## Instalación
-
-Clona el repositorio y entra en su carpeta:
 
 ```bash
 git clone https://github.com/ibaa-13/horariosUSC.git
@@ -32,15 +19,13 @@ cd horariosUSC
 python -m venv .venv
 ```
 
-Activa el entorno virtual:
-
-**Windows (PowerShell)**
+Activa el entorno en PowerShell:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 ```
 
-**Linux / macOS**
+En Linux o macOS:
 
 ```bash
 source .venv/bin/activate
@@ -49,163 +34,138 @@ source .venv/bin/activate
 Instala las dependencias:
 
 ```bash
-python -m pip install requests beautifulsoup4 pandas PyYAML selenium
+python -m pip install -r requirements.txt
 ```
 
 ## Configuración
 
-### 1. Ajustar la ruta del archivo de configuración
+Edita [`config.yaml`](config.yaml). La lista `cursos` contiene el nombre de cada curso y la URL AJAX de su calendario en la USC. Las URLs incluidas representan vistas concretas del calendario; revisa el curso académico y la semana antes de usarlas.
 
-En `loadconfig.py`, sustituye la ruta original de `CONFIG_PATH` por:
-
-```python
-CONFIG_PATH = "config.yaml"
-```
-
-Los comandos de este README deben ejecutarse desde la raíz del repositorio; las rutas relativas se resuelven desde el directorio de ejecución.
-
-### 2. Editar `config.yaml`
-
-Conserva o adapta la lista `cursos` y modifica las rutas de salida y del navegador. Por ejemplo:
+Las rutas relativas se resuelven desde la raíz del proyecto, independientemente del directorio desde el que ejecutes `run.py`:
 
 ```yaml
-cursos:
-  - curso: "Primero"
-    url: "https://www.usc.gal/es/course/widget/76/course-detail-controller-week-filter/5060/19627-1/25/42?_wrapper_format=drupal_ajax"
-
 chrome_data_dir: "chrome/selenium"
 chromedriver_path: "chrome/chromedriver.exe"
-
 timetable_path: "output/horario.csv"
 forms_data_path: "output/forms_data.json"
 ```
 
-La URL anterior es un ejemplo incluido en el repositorio, no una referencia que se actualice automáticamente al curso académico vigente. Usa las URLs del widget de horarios correspondiente al curso y la semana que quieras consultar.
+Las carpetas de salida se crean automáticamente. Puedes utilizar rutas absolutas si lo necesitas. En Linux o macOS, adapta el nombre del ejecutable de ChromeDriver.
 
-| Campo | Descripción |
-| --- | --- |
-| `cursos` | Lista de nombres de curso y URLs del widget de horarios de la USC. |
-| `chrome_data_dir` | Directorio de datos de Chrome utilizado por Selenium. Debe contener una sesión de Google iniciada para crear el formulario. |
-| `chromedriver_path` | Ruta al ejecutable de ChromeDriver; adapta el nombre en Linux o macOS. |
-| `timetable_path` | Ruta del CSV que genera la extracción. |
-| `forms_data_path` | Ruta del JSON con cursos, asignaturas y grupos. |
-
-Crea el directorio de salida antes de ejecutar los scripts:
-
-```bash
-mkdir output
-```
-
-Los scripts no crean las carpetas de salida automáticamente. Para utilizar Selenium, coloca ChromeDriver en la ruta indicada y evita abrir simultáneamente el mismo directorio de datos con otra instancia de Chrome.
+Coloca ChromeDriver en la ruta configurada. El directorio de datos de Chrome debe contener una sesión de Google iniciada; no lo uses simultáneamente desde otra instancia de Chrome. Los perfiles del navegador y las salidas están excluidos de Git.
 
 ## Uso
 
-### Obtener los horarios y preparar los datos
+Desde la raíz del repositorio, genera el CSV y el JSON sin abrir el navegador:
 
 ```bash
-python getTimetable.py
-python createFormsData.py
+python run.py --no-forms
 ```
 
-El primer comando genera el CSV; el segundo lee ese CSV y genera el JSON. Esta opción permite preparar los datos sin abrir Google Forms.
-
-### Crear el formulario
-
-Con el JSON generado y el navegador configurado:
-
-```bash
-python createForms.py
-```
-
-El script abre `https://forms.new` y añade las asignaturas con sus grupos como opciones de casillas. Revisa el formulario resultante, su título y cualquier pregunta inicial antes de compartirlo.
-
-### Ejecutar el flujo de Python completo
+Para ejecutar también la creación del formulario:
 
 ```bash
 python run.py
 ```
 
-Ejecuta la extracción, la generación del JSON y la creación del formulario. Para omitir este último paso, cambia en `run.py`:
+También puedes ejecutar cada etapa por separado, respetando el orden cuando quieras regenerar todos los datos:
 
-```python
-wantToCreateForms = False
+```bash
+python -m horarios.getTimetable
+python -m horarios.createFormsData
+python -m horarios.createForms
 ```
 
-`run.py` importa el módulo de creación del formulario al arrancar, por lo que necesita Selenium instalado incluso con esa opción desactivada. La generación de PDF se configura aparte en Apps Script.
+El formulario añade un título por curso y una pregunta de casillas por asignatura. Revisa el resultado antes de compartirlo: el script puede continuar tras un error en una pregunta y dejar el formulario incompleto.
 
-## Generar PDF desde las respuestas
+Los archivos de `examples/` son muestras estáticas; no se actualizan al ejecutar el programa. Los resultados nuevos se guardan en `output/`.
 
-### Preparar los archivos en Google Drive
+## Generar PDF con Google Apps Script
 
-1. Sube el CSV generado a Drive como archivo CSV, conservando el separador `;`.
-2. Sube `Plantilla.docx` y conviértelo a un documento de Google Docs. Apps Script abre la plantilla mediante `DocumentApp`.
-3. Comprueba que la plantilla contiene los códigos de las franjas que quieres rellenar, como `L10`, `M11` o `X12`.
-4. Crea una carpeta en Drive para guardar los PDF.
-5. Copia los identificadores de la plantilla de Google Docs, el CSV y la carpeta desde sus respectivas URLs.
+1. Sube `output/horario.csv` a Drive como archivo CSV, conservando el separador `;`.
+2. Sube [`templates/Plantilla.docx`](templates/Plantilla.docx) y conviértelo a un documento de Google Docs. Revisa que sus marcadores, como `L10` o `X12`, coincidan con las franjas del CSV.
+3. Crea una carpeta en Drive para los PDF.
+4. En Google Forms, activa la recopilación de correos y vincula una hoja de respuestas de Google Sheets.
+5. Desde esa hoja, abre **Extensiones → Apps Script** y copia [`apps_script/codigo.gs`](apps_script/codigo.gs).
+6. En **Configuración del proyecto → Propiedades de la secuencia de comandos**, añade estas propiedades:
 
-### Configurar el formulario y Apps Script
+| Propiedad | Valor |
+| --- | --- |
+| `PLANTILLA_ID` | Identificador del documento de Google Docs usado como plantilla. |
+| `DATASET_ID` | Identificador del archivo CSV en Drive. |
+| `FOLDER_ID` | Identificador de la carpeta de destino. |
 
-1. Activa la recopilación de direcciones de correo electrónico en Google Forms.
-2. Vincula el formulario a una hoja de cálculo de Google Sheets.
-3. Desde esa hoja, abre **Extensiones → Apps Script** y copia el contenido de `codigo.gs`.
-4. Completa las constantes del script:
+Los identificadores se obtienen de las URLs de los archivos y la carpeta. No es necesario incluirlos en el código del repositorio.
 
-   ```javascript
-   const plantillaId = 'ID_DE_LA_PLANTILLA_GOOGLE_DOCS';
-   const datasetId = 'ID_DEL_ARCHIVO_CSV';
-   const folderId = 'ID_DE_LA_CARPETA_DE_PDF';
-   ```
+7. Comprueba que `nombre_columna_correo` coincide con el encabezado de correo de tu hoja; por defecto es `Dirección de correo electrónico`.
+8. Crea un activador instalable para `onFormSubmit`, con origen **Hoja de cálculo** y evento **Al enviar formulario**, y autoriza los permisos solicitados.
+9. Envía una respuesta desde el formulario para comprobar el flujo completo.
 
-5. Comprueba que la columna del correo se llama exactamente `Dirección de correo electrónico`. Si tiene otro nombre, adapta la clave utilizada en `e.namedValues`.
-6. Añade un **activador instalable** para `onFormSubmit`, con origen **Hoja de cálculo** y evento **Al enviar formulario**, y autoriza los permisos que solicite Google.
-7. Envía una respuesta de prueba desde el formulario.
+No ejecutes `onFormSubmit` directamente desde el editor: necesita el evento de envío de la hoja, incluido `e.namedValues`.
 
-El activador debe estar asociado a la hoja de respuestas porque el código utiliza `e.namedValues`. Ejecutar `onFormSubmit` directamente desde el editor no proporciona ese evento.
+El script crea un PDF con el nombre `Horario` seguido del usuario del correo, lo guarda en la carpeta configurada, concede acceso de lectura al correo indicado y registra el enlace en la columna `Links`. La copia temporal de Google Docs se envía a la papelera.
 
-Con cada respuesta, el script crea un PDF llamado `Horario`, lo guarda en la carpeta configurada, concede acceso de lectura al correo indicado y añade su URL a la columna `Links`. La copia temporal de Google Docs se envía a la papelera.
+Cuando regeneres los horarios, actualiza también el CSV de Drive. Si cambia su identificador, actualiza `DATASET_ID`.
 
-## Formato de los datos
-
-El extractor genera un CSV en UTF-8 con BOM y separador `;`, con estas columnas:
-
-| Columna | Contenido | Ejemplo |
-| --- | --- | --- |
-| `Curso` | Nombre del curso configurado | `Primero` |
-| `Slot` | Día y hora de inicio de la franja | `L10` |
-| `Asignatura` | Nombre de la asignatura | `Introducción al análisis matemático` |
-| `Grupo` | Identificador del grupo | `CLE01` |
-| `Aula` | Aula publicada, cuando está disponible | `Aula 02` |
-| `Hora` | Intervalo de la franja | `10:00-11:00` |
-
-Los días se codifican como `L`, `M`, `X`, `J`, `V`, `S` y `D`. Las clases se dividen en bloques de una hora. El CSV de ejemplo incluido en la raíz contiene además una columna `Codigo`, que el extractor actual no genera.
-
-El JSON organiza los datos como `curso → asignatura → lista de grupos`. Los grupos se ordenan por prefijo (`CLE`, `CLIS`, `CLIL`) y número.
-
-## Estructura del repositorio
+## Estructura
 
 ```text
 horariosUSC/
-├── run.py               # Ejecuta el flujo de Python
-├── loadconfig.py        # Carga la configuración YAML
-├── config.yaml          # Cursos, URLs y rutas locales
-├── getTimetable.py      # Extrae los horarios y genera el CSV
-├── createFormsData.py   # Convierte el CSV en datos para el formulario
-├── createForms.py       # Crea el formulario mediante Selenium
-├── codigo.gs            # Genera y comparte PDF desde Apps Script
-├── Plantilla.docx       # Plantilla para el horario
-├── horario.csv          # Datos de ejemplo incluidos
-└── forms_data.json      # Datos de ejemplo incluidos
+├── README.md
+├── requirements.txt
+├── .gitignore
+├── .gitattributes
+├── config.yaml
+├── run.py
+├── horarios/
+│   ├── __init__.py
+│   ├── loadconfig.py
+│   ├── getTimetable.py
+│   ├── createFormsData.py
+│   └── createForms.py
+├── apps_script/
+│   └── codigo.gs
+├── templates/
+│   └── Plantilla.docx
+├── examples/
+│   ├── horario.csv
+│   └── forms_data.json
+└── output/                  # Generado localmente; excluido de Git
 ```
 
-## Limitaciones y resolución de problemas
+`chrome/`, `local/` y `.local-backup/` son directorios locales excluidos de Git. No forman parte de la distribución.
 
-- **Rutas no encontradas:** revisa `CONFIG_PATH`, las rutas de `config.yaml` y la existencia de los directorios de salida. Las rutas originales usan una estructura local `python/horarios/` que no coincide con la raíz del repositorio.
-- **Errores al extraer horarios:** el extractor depende de la respuesta AJAX y de la estructura HTML de la USC. Si cambian, será necesario adaptar las URLs o los selectores.
-- **Errores al crear el formulario:** comprueba la compatibilidad entre Chrome y ChromeDriver, la sesión de Google y el idioma español de la interfaz. Los cambios en Google Forms pueden requerir actualizar los selectores de Selenium.
-- **Grupos vacíos o sin número:** la ordenación presupone identificadores con una parte numérica; otros formatos pueden provocar errores.
-- **Franjas parciales:** el extractor avanza en bloques de una hora y el código `Slot` no incluye minutos. Los intervalos que no encajan en ese esquema requieren adaptar la lógica.
-- **Solapamientos y asignaturas repetidas:** el script no resuelve conflictos de horario y filtra las respuestas por nombre de asignatura y grupo, sin distinguir el curso. Revisa los resultados si varias entradas comparten esos valores.
-- **Marcadores de la plantilla:** solo se sustituyen los códigos presentes en el CSV; los demás pueden quedar visibles en el PDF.
-- **Respuestas simultáneas:** el enlace del PDF se escribe en la última fila de la hoja, por lo que varias respuestas concurrentes pueden asociarlo a una fila incorrecta.
+## Actualizar desde la estructura anterior
 
-Cuando actualices los horarios, vuelve a generar los datos y actualiza también el CSV de Drive que utiliza Apps Script. Si cambias su identificador, modifica `datasetId`.
+Los módulos Python ahora están en `horarios/`. Sustituye comandos como `python getTimetable.py` por `python -m horarios.getTimetable`, ejecutados desde la raíz del repositorio. El punto de entrada sigue siendo `python run.py`; la antigua variable `wantToCreateForms` se sustituye por la opción `--no-forms`.
+
+La configuración se carga desde `config.yaml` en la raíz, sin editar `CONFIG_PATH`. Conserva tus URLs de cursos y adapta las rutas si utilizabas ubicaciones personalizadas.
+
+Si ya tienes una instalación de Apps Script, configura las propiedades `PLANTILLA_ID`, `DATASET_ID` y `FOLDER_ID` con los valores de tus antiguas constantes antes de sustituir el código. La reorganización local no actualiza automáticamente tu proyecto de Apps Script.
+
+## Formato de los datos
+
+El CSV generado utiliza UTF-8 con BOM y separador `;`:
+
+| Columna | Contenido | Ejemplo |
+| --- | --- | --- |
+| `Curso` | Curso configurado | `Primero` |
+| `Slot` | Día y hora de inicio | `L10` |
+| `Asignatura` | Nombre de la asignatura | `Introducción al análisis matemático` |
+| `Grupo` | Grupo | `CLE01` |
+| `Aula` | Aula, si está disponible | `Aula 02` |
+| `Hora` | Intervalo horario | `10:00-11:00` |
+
+Los días se representan mediante `L`, `M`, `X`, `J`, `V`, `S` y `D`. El extractor divide las clases en bloques de una hora. El JSON organiza los datos como `curso → asignatura → lista de grupos`, ordenados por prefijo (`CLE`, `CLIS`, `CLIL`) y número.
+
+## Limitaciones
+
+- La extracción depende de la estructura HTML y de las respuestas AJAX de la USC; los cambios en la web pueden requerir adaptar el código.
+- Selenium depende del idioma y de la estructura de Google Forms. Comprueba la sesión de Google y la compatibilidad de ChromeDriver si falla.
+- La ordenación de grupos presupone nombres con una parte numérica; los grupos vacíos o con otro formato pueden provocar errores.
+- Las franjas se procesan en bloques de una hora y sus códigos no incluyen minutos.
+- No se resuelven solapamientos. Apps Script filtra por asignatura y grupo, sin distinguir el curso.
+- Solo se sustituyen los marcadores presentes en el CSV; otros marcadores pueden quedar visibles en la plantilla.
+- El enlace del PDF se escribe en la última fila de la hoja; los envíos simultáneos pueden asociarlo a una fila incorrecta.
+
+Las dependencias no están fijadas a versiones concretas. La generación y el uso del formulario requieren comprobar la integración con los servicios externos.
